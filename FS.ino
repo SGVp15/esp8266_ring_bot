@@ -1,8 +1,5 @@
-
-                 
-
 // Инициализация FFS
-void FS_init(void) {
+bool FS_init(void) {
   SPIFFS.begin();
   {
     Dir dir = SPIFFS.openDir("/");
@@ -11,34 +8,35 @@ void FS_init(void) {
       size_t fileSize = dir.fileSize();
     }
   }
-  //HTTP страницы для работы с FFS
-  //list directory
-  server.on("/list", HTTP_GET, handleFileList);
-  //загрузка редактора editor
-  server.on("/edit", HTTP_GET, []() {
-    if (!handleFileRead("/edit.htm")) server.send(404, "text/plain", "FileNotFound");
+  // HTTP страницы для работы с FFS
+  // list directory
+  HTTP.on("/list", HTTP_GET, handleFileList);
+  // загрузка редактора editor
+  HTTP.on("/edit", HTTP_GET, []() {
+    if (!handleFileRead("/edit.htm")) HTTP.send(404, "text/plain", "FileNotFound");
   });
-  //Создание файла
-  server.on("/edit", HTTP_PUT, handleFileCreate);
-  //Удаление файла
-  server.on("/edit", HTTP_DELETE, handleFileDelete);
-  //first callback is called after the request has ended with all parsed arguments
-  //second callback handles file uploads at that location
-  server.on("/edit", HTTP_POST, []() {
-    server.send(200, "text/plain", "");
+  // Создание файла
+  HTTP.on("/edit", HTTP_PUT, handleFileCreate);
+  // Удаление файла
+  HTTP.on("/edit", HTTP_DELETE, handleFileDelete);
+  // first callback is called after the request has ended with all parsed arguments
+  // second callback handles file uploads at that location
+  HTTP.on("/edit", HTTP_POST, []() {
+    HTTP.send(200, "text/plain", "");
   }, handleFileUpload);
-  //called when the url is not defined here
-  //use it to load content from SPIFFS
-  server.onNotFound([]() {
-    if (!handleFileRead(server.uri()))
-      server.send(404, "text/plain", "FileNotFound");
+  // called when the url is not defined here
+  // use it to load content from SPIFFS
+  HTTP.onNotFound([]() {
+    if (!handleFileRead(HTTP.uri()))
+      HTTP.send(404, "text/plain", "FileNotFound");
   });
+  return true;
 }
 
 
 // Здесь функции для работы с файловой системой
 String getContentType(String filename) {
-  if (server.hasArg("download")) return "application/octet-stream";
+  if (HTTP.hasArg("download")) return "application/octet-stream";
   else if (filename.endsWith(".htm")) return "text/html";
   else if (filename.endsWith(".html")) return "text/html";
   else if (filename.endsWith(".json")) return "application/json";
@@ -64,7 +62,7 @@ bool handleFileRead(String path) {
     if (SPIFFS.exists(pathWithGz))
       path += ".gz";
     File file = SPIFFS.open(path, "r");
-    size_t sent = server.streamFile(file, contentType);
+    size_t sent = HTTP.streamFile(file, contentType);
     file.close();
     return true;
   }
@@ -73,15 +71,15 @@ bool handleFileRead(String path) {
 
 
 void handleFileUpload() {
-  if (server.uri() != "/edit") return;
-  HTTPUpload& upload = server.upload();
+  if (HTTP.uri() != "/edit") return;
+  HTTPUpload& upload = HTTP.upload();
   if (upload.status == UPLOAD_FILE_START) {
     String filename = upload.filename;
     if (!filename.startsWith("/")) filename = "/" + filename;
     fsUploadFile = SPIFFS.open(filename, "w");
     filename = String();
   } else if (upload.status == UPLOAD_FILE_WRITE) {
-    //DBG_OUTPUT_PORT.print("handleFileUpload Data: "); DBG_OUTPUT_PORT.println(upload.currentSize);
+    // DBG_OUTPUT_PORT.print("handleFileUpload Data: "); DBG_OUTPUT_PORT.println(upload.currentSize);
     if (fsUploadFile)
       fsUploadFile.write(upload.buf, upload.currentSize);
   } else if (upload.status == UPLOAD_FILE_END) {
@@ -92,42 +90,42 @@ void handleFileUpload() {
 
 
 void handleFileDelete() {
-  if (server.args() == 0) return server.send(500, "text/plain", "BAD ARGS");
-  String path = server.arg(0);
+  if (HTTP.args() == 0) return HTTP.send(500, "text/plain", "BAD ARGS");
+  String path = HTTP.arg(0);
   if (path == "/")
-    return server.send(500, "text/plain", "BAD PATH");
+    return HTTP.send(500, "text/plain", "BAD PATH");
   if (!SPIFFS.exists(path))
-    return server.send(404, "text/plain", "FileNotFound");
+    return HTTP.send(404, "text/plain", "FileNotFound");
   SPIFFS.remove(path);
-  server.send(200, "text/plain", "");
+  HTTP.send(200, "text/plain", "");
   path = String();
 }
 
 
 void handleFileCreate() {
-  if (server.args() == 0)
-    return server.send(500, "text/plain", "BAD ARGS");
-  String path = server.arg(0);
+  if (HTTP.args() == 0)
+    return HTTP.send(500, "text/plain", "BAD ARGS");
+  String path = HTTP.arg(0);
   if (path == "/")
-    return server.send(500, "text/plain", "BAD PATH");
+    return HTTP.send(500, "text/plain", "BAD PATH");
   if (SPIFFS.exists(path))
-    return server.send(500, "text/plain", "FILE EXISTS");
+    return HTTP.send(500, "text/plain", "FILE EXISTS");
   File file = SPIFFS.open(path, "w");
   if (file)
     file.close();
   else
-    return server.send(500, "text/plain", "CREATE FAILED");
-  server.send(200, "text/plain", "");
+    return HTTP.send(500, "text/plain", "CREATE FAILED");
+  HTTP.send(200, "text/plain", "");
   path = String();
 }
 
 
 void handleFileList() {
-  if (!server.hasArg("dir")) {
-    server.send(500, "text/plain", "BAD ARGS");
+  if (!HTTP.hasArg("dir")) {
+    HTTP.send(500, "text/plain", "BAD ARGS");
     return;
   }
-  String path = server.arg("dir");
+  String path = HTTP.arg("dir");
   Dir dir = SPIFFS.openDir(path);
   path = String();
   String output = "[";
@@ -143,5 +141,5 @@ void handleFileList() {
     entry.close();
   }
   output += "]";
-  server.send(200, "text/json", output);
+  HTTP.send(200, "text/json", output);
 }

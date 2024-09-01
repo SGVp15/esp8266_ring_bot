@@ -1,1 +1,10 @@
-{"SSDP":"SSDP-test","ssid":"home","password":"i12345678","ssidAP":"WiFi","passwordAP":"","ip":"192.168.0.101"}
+{
+"SSDPName":"ESP-8266-RING",
+"ssidAPName":"ESP-8266-ring",
+"ssidAPPassword":"1234567890",
+"ssidName":"G",
+"ssidPassword":"qweasdqwe",
+"timezone":3,
+"BOT_TOKEN":"___:___-__",
+"CHAT_ID":"822012345"
+}
