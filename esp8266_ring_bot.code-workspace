@@ -1,0 +1,12 @@
+{
+	"folders": [
+		{
+			"path": "."
+		},
+		{
+			"name": "esp8266_ring_bot",
+			"path": "esp8266_ring_bot"
+		}
+	],
+	"settings": {}
+}
